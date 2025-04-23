@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 type Mcq = {
@@ -8,16 +9,24 @@ type Mcq = {
   answer: string;
 };
 
-export default function McqGenerator() {
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div className="text-white text-center p-4">Loading MCQs...</div>}>
+      <McqContent />
+    </Suspense>
+  );
+}
+
+function McqContent() {
   const p = useSearchParams();
   const title = p.get('title') || 'Sample Title';
   const description = p.get('description') || 'This is a sample description used to auto-generate MCQs.';
 
   const [mcqs, setMcqs] = useState<Mcq[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userAnswers, setUserAnswers] = useState<string[]>([]); // Track user-selected answers
-  const [score, setScore] = useState(0); // Track score
-  const [answered, setAnswered] = useState(false); // Track if the user has answered all questions
+  const [userAnswers, setUserAnswers] = useState<string[]>([]);
+  const [score, setScore] = useState(0);
+  const [answered, setAnswered] = useState(false);
 
   useEffect(() => {
     const fetchMcqs = async () => {
@@ -29,12 +38,9 @@ export default function McqGenerator() {
         });
 
         const data = await res.json();
-        console.log('Received MCQs:', data); // Log the complete response to inspect it
-
-        // Ensure data follows the correct structure
         if (data && Array.isArray(data.result)) {
-          setMcqs(data.result);  // Set the array from the "result" property
-          setUserAnswers(new Array(data.result.length).fill('')); // Initialize empty answers
+          setMcqs(data.result);
+          setUserAnswers(new Array(data.result.length).fill(''));
         } else {
           console.error('Invalid data format received');
         }
@@ -57,12 +63,10 @@ export default function McqGenerator() {
   const handleSubmit = () => {
     let userScore = 0;
     mcqs.forEach((mcq, index) => {
-      if (userAnswers[index] === mcq.answer) {
-        userScore++;
-      }
+      if (userAnswers[index] === mcq.answer) userScore++;
     });
     setScore(userScore);
-    setAnswered(true); // Mark as answered
+    setAnswered(true);
   };
 
   return (
@@ -85,8 +89,8 @@ export default function McqGenerator() {
                         value={opt}
                         checked={userAnswers[index] === opt}
                         onChange={() => handleAnswerChange(index, opt)}
-                        disabled={answered} // Disable after submission
-                        className="h-4 w-4  border-black focus:ring-blue-500 px-2 text-white"
+                        disabled={answered}
+                        className="h-4 w-4 border-black focus:ring-blue-500"
                       />
                       <span className="text-white">{opt}</span>
                     </label>
@@ -94,7 +98,6 @@ export default function McqGenerator() {
                 ))}
               </ul>
 
-              {/* Conditionally show the answer */}
               {answered && (
                 <p className="text-sm mt-3 ml-3">
                   <span className={mcq.answer === userAnswers[index] ? 'text-green-600' : 'text-red-600'}>
@@ -122,7 +125,7 @@ export default function McqGenerator() {
           )}
         </div>
       ) : (
-        <p className="text-center text-gray-600">No MCQs found.</p>
+        !loading && <p className="text-center text-gray-600">No MCQs found.</p>
       )}
     </div>
   );
